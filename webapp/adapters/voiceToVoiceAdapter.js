@@ -1,6 +1,7 @@
 import { getTranscribeAudioStream } from "../utils/transcribeUtils";
 import { SUPPORTED_SOURCE_LANGUAGES, SUPPORTED_TARGET_LANGUAGES } from "../supportedLanguages.js";
 import { ConnectionHealthMonitor } from "../managers/ConnectionHealthMonitor.js";
+import { AUDIO_INGEST_SAMPLE_RATE, BUFFER_LEN } from "../constants.js";
 
 
 class DeepLVoiceClient {
@@ -43,14 +44,9 @@ class DeepLVoiceClient {
     this.audioChunks = [];  // { sentAt, audioStartMs, audioEndMs }
     this.concludedTargetTranscriptTimes = [];  // { receivedAt, audioEndTime }
     this.cumulativeAudioTime = 0;  // Total audio sent so far in ms
-    this.sampleRate = 48000;
+    this.sampleRate = AUDIO_INGEST_SAMPLE_RATE;
     this.bytesPerSample = 2;  // 16-bit audio
-    
-    this.latencyMetrics = {
-      transcription: [],      // Audio → Transcription
-      translation: [],        // Audio → Translation text
-      audioSynthesis: [],     // Translation text → Synthesized audio (NEW)
-    };
+
     this.audioLatencyTrackManager = options.audioLatencyTrackManager;
 
     // Connection health monitoring with VAD-aware zombie detection
@@ -365,6 +361,28 @@ class DeepLVoiceClient {
     }
   }
 
+  _downsample(buffer, fromRate, toRate) {
+      if (fromRate === toRate) return buffer;
+
+      const ratio = fromRate / toRate;
+      const input = new Int16Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / 2);
+      const outputLength = Math.floor(input.length / ratio);
+      const output = new Int16Array(outputLength);
+
+      for (let i = 0; i < outputLength; i++) {
+          // Average the samples in each window to avoid aliasing
+          const start = Math.floor(i * ratio);
+          const end = Math.floor((i + 1) * ratio);
+          let sum = 0;
+          for (let j = start; j < end; j++) {
+              sum += input[j];
+          }
+          output[i] = Math.round(sum / (end - start));
+      }
+
+      return Buffer.from(output.buffer);
+  }
+
   /**
      * Send audio data to the server
      * 
@@ -375,13 +393,14 @@ class DeepLVoiceClient {
   async streamAudio(audioStream, sampleRate) {
     try {
         let buffer = Buffer.alloc(0);
-        const chunkSize = 9600; // 100ms of audio at 48kHz mono PCM (16000 samples/sec * 0.1 sec * 2 bytes/sample)
+        const targetSampleRate = AUDIO_INGEST_SAMPLE_RATE;
+        const chunkSize = BUFFER_LEN; // 100ms of audio at 48kHz mono PCM (16000 samples/sec * 0.1 sec * 2 bytes/sample)
         let totalChunksReceived = 0;
         let totalChunksSent = 0;
         let lastLogTime = Date.now();
         const logInterval = 5000; // Log summary every 5 seconds
 
-        console.log(`[${this.type}] 🎬 streamAudio started - chunkSize: ${chunkSize} bytes (${(chunkSize / (sampleRate * 2) * 1000).toFixed(0)}ms @ ${sampleRate}Hz)`);
+        console.log(`[${this.type}] 🎬 streamAudio started - chunkSize: ${chunkSize} bytes (${(chunkSize / (targetSampleRate * 2) * 1000).toFixed(0)}ms @ ${targetSampleRate}Hz)`);
 
         for await (const audioEvent of getTranscribeAudioStream(audioStream, sampleRate)) {
             // Stop streaming if we've been disconnected (e.g., call ended)
@@ -392,6 +411,10 @@ class DeepLVoiceClient {
 
             let chunk = audioEvent.AudioEvent.AudioChunk;
             totalChunksReceived++;
+
+            if (sampleRate > targetSampleRate) {
+                chunk = this._downsample(chunk, sampleRate, targetSampleRate);
+            }
 
             buffer = Buffer.concat([buffer, chunk]);
 
