@@ -4,6 +4,7 @@ import {
     VAD_RMS_MIN_THRESHOLD,
     TURN_LATENCY_MAX_MS_GOOD,
     TURN_LATENCY_MAX_MS_OK,
+    AUDIO_INGEST_SAMPLE_RATE,
 } from "../constants";
 
 
@@ -20,7 +21,7 @@ export class AudioLatencyTrackManager {
         this.customerCumulativeAudioTime = 0;  // Total audio sent so far in ms
         this.agentCumulativeAudioTime = 0;  // Total audio sent so far in ms
 
-        this.audioIngestSampleRate = 48000;
+        this.audioIngestSampleRate = AUDIO_INGEST_SAMPLE_RATE;
         this.bytesPerSample = 2;  // 16-bit audio
         
         this.customerPipelineLatencies = {

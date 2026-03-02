@@ -12,6 +12,8 @@ import {
   CUSTOMER_TRANSLATION_TO_CUSTOMER_VOLUME,
   LOGGER_PREFIX,
   LATENCY_TRACKING_ENABLED,
+  AUDIO_INGEST_SAMPLE_RATE,
+  AUDIO_OUTPUT_SAMPLE_RATE
 } from "./constants";
 import { getLoginUrl, getValidTokens, handleRedirect, isAuthenticated, logout, setRedirectURI, startTokenRefreshTimer } from "./utils/authUtility";
 import { AudioStreamManager } from "./managers/AudioStreamManager";
@@ -770,8 +772,8 @@ async function customerStartSession(audioLatencyTrackManager) {
       targetMediaLanguages: [CCP_V2V.UI.customerTranslateToLanguageSelect.value],
       formality: CCP_V2V.UI.customerFormalitySelect.value,
       targetMediaVoice: CCP_V2V.UI.customerVoiceIdSelect.value !== "disabled" ? CCP_V2V.UI.customerVoiceIdSelect.value : "female",
-      sourceMediaContentType: "audio/pcm;encoding=s16le;rate=48000",
-      targetMediaContentType: "audio/pcm;encoding=s16le;rate=16000",
+      sourceMediaContentType: `audio/pcm;encoding=s16le;rate=${AUDIO_INGEST_SAMPLE_RATE}`,
+      targetMediaContentType: `audio/pcm;encoding=s16le;rate=${AUDIO_OUTPUT_SAMPLE_RATE}`,
     });
   } catch (error) {
     console.error(`${LOGGER_PREFIX} - customerStartSession - Error starting customer session:`, error);
@@ -796,8 +798,8 @@ async function agentStartSession(audioLatencyTrackManager) {
       targetMediaLanguages: [CCP_V2V.UI.agentTranslateToLanguageSelect.value],
       targetMediaVoice: CCP_V2V.UI.agentVoiceIdSelect.value !== "disabled" ? CCP_V2V.UI.agentVoiceIdSelect.value : "female",
       formality: CCP_V2V.UI.agentFormalitySelect.value,
-      sourceMediaContentType: "audio/pcm;encoding=s16le;rate=48000",
-      targetMediaContentType: "audio/pcm;encoding=s16le;rate=16000",
+      sourceMediaContentType: `audio/pcm;encoding=s16le;rate=${AUDIO_INGEST_SAMPLE_RATE}`,
+      targetMediaContentType: `audio/pcm;encoding=s16le;rate=${AUDIO_OUTPUT_SAMPLE_RATE}`,
     });
   } catch (error) {
     console.error(`${LOGGER_PREFIX} - agentStartSession - Error starting agent session:`, error);
