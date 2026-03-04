@@ -111,6 +111,9 @@ async function replaceToCustomerAudioStreamManager() {
     await ToCustomerAudioStreamManager.dispose();
   }
   ToCustomerAudioStreamManager = new AudioStreamManager(CCP_V2V.UI.toCustomerAudioElement, await getAudioContext());
+  // Apply saved agent volume when manager is created
+  const agentVolume = parseFloat(CCP_V2V.UI.agentStreamMicVolume.value);
+  ToCustomerAudioStreamManager.setMicrophoneVolume(agentVolume);
 }
 
 async function replaceToAgentAudioStreamManager() {
@@ -1272,6 +1275,10 @@ function loadVolumeSliders() {
   const savedAgentVolume = getLocalStorageValueByKey("agentStreamMicVolume");
   if (savedAgentVolume) {
     CCP_V2V.UI.agentStreamMicVolume.value = savedAgentVolume;
+    // Apply volume to ToCustomerAudioStreamManager if it exists
+    if (ToCustomerAudioStreamManager != null) {
+      ToCustomerAudioStreamManager.setMicrophoneVolume(parseFloat(savedAgentVolume));
+    }
   }
 }
 
@@ -1348,9 +1355,11 @@ function clearTranscriptCards() {
 }
 
 function cleanUpUI() {
-  // Clear transcription text output divs when contact ends
+  // Clear transcription and translation text output divs when contact ends
   CCP_V2V.UI.customerTranscriptionTextOutputDiv.textContent = "";
   CCP_V2V.UI.agentTranscriptionTextOutputDiv.textContent = "";
+  CCP_V2V.UI.customerTranslatedTextOutputDiv.textContent = "";
+  CCP_V2V.UI.agentTranslatedTextOutputDiv.textContent = "";
 }
 
 function getMicrophoneConstraints(deviceId) {
