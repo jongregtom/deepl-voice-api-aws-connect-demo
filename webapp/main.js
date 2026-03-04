@@ -1154,7 +1154,9 @@ async function handleAgentTranscript(text) {
 }
 
 async function handleCustomerSynthesis(data) {
-  if (!data || !CCP_V2V.UI.customerVoiceIdSelect.value) return;
+  if (!data || !CCP_V2V.UI.agentVoiceIdSelect.value || CCP_V2V.UI.agentVoiceIdSelect.value === "disabled") return;
+
+
   for (let i = 0; i < data.length; i++) {
     //Play Customer Speech to Agent
     let audioContentArrayBufferPrimary = base64ToArrayBuffer(data[i]);
@@ -1173,7 +1175,7 @@ async function handleCustomerSynthesis(data) {
 }
 
 function handleAgentSynthesis(data) {
-  if (!data || !CCP_V2V.UI.agentVoiceIdSelect.value) return;
+  if (!data || !CCP_V2V.UI.customerVoiceIdSelect.value || CCP_V2V.UI.customerVoiceIdSelect.value === "disabled") return;
   for (let i = 0; i < data.length; i++) {
     //Play Agent Speech to Customer
     const audioContentArrayBufferPrimary = base64ToArrayBuffer(data[i]);
