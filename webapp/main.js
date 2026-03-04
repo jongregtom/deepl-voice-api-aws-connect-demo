@@ -172,6 +172,7 @@ const onLoad = async () => {
   loadTranslateLanguageCodes();
   loadTranslationFormalities();
   loadVoiceIds();
+  loadVolumeSliders();
   setLatencyTrackingUIVisibility();
   initCCP(onConnectInitialized);
 };
@@ -314,6 +315,7 @@ const initEventListeners = () => {
     const micVolume = parseFloat(event.target.value);
     console.log(`${LOGGER_PREFIX} - customerStreamMicVolume input - Setting microphone volume to: ${micVolume}`);
     CCP_V2V.UI.fromCustomerAudioElement.volume = micVolume;
+    addUpdateLocalStorageKey("customerStreamMicVolume", event.target.value);
   });
 
   CCP_V2V.UI.customerAudioFeedbackEnabledCheckbox.addEventListener("change", (event) => {
@@ -375,6 +377,7 @@ const initEventListeners = () => {
   CCP_V2V.UI.agentStreamMicVolume.addEventListener("input", (event) => {
     const micVolume = parseFloat(event.target.value);
     if (ToCustomerAudioStreamManager != null) ToCustomerAudioStreamManager.setMicrophoneVolume(micVolume);
+    addUpdateLocalStorageKey("agentStreamMicVolume", event.target.value);
   });
 
   //Translate Agent UI buttons
@@ -1256,6 +1259,19 @@ function loadVoiceIds() {
   const savedAgentVoiceId = getLocalStorageValueByKey("agentVoiceId");
   if (savedAgentVoiceId) {
     CCP_V2V.UI.agentVoiceIdSelect.value = savedAgentVoiceId;
+  }
+}
+
+function loadVolumeSliders() {
+  const savedCustomerVolume = getLocalStorageValueByKey("customerStreamMicVolume");
+  if (savedCustomerVolume) {
+    CCP_V2V.UI.customerStreamMicVolume.value = savedCustomerVolume;
+    CCP_V2V.UI.fromCustomerAudioElement.volume = parseFloat(savedCustomerVolume);
+  }
+
+  const savedAgentVolume = getLocalStorageValueByKey("agentStreamMicVolume");
+  if (savedAgentVolume) {
+    CCP_V2V.UI.agentStreamMicVolume.value = savedAgentVolume;
   }
 }
 
