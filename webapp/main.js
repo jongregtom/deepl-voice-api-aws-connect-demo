@@ -111,6 +111,9 @@ async function replaceToCustomerAudioStreamManager() {
     await ToCustomerAudioStreamManager.dispose();
   }
   ToCustomerAudioStreamManager = new AudioStreamManager(CCP_V2V.UI.toCustomerAudioElement, await getAudioContext());
+  // Apply saved agent volume when manager is created
+  const agentVolume = parseFloat(CCP_V2V.UI.agentStreamMicVolume.value);
+  ToCustomerAudioStreamManager.setMicrophoneVolume(agentVolume);
 }
 
 async function replaceToAgentAudioStreamManager() {
@@ -172,6 +175,7 @@ const onLoad = async () => {
   loadTranslateLanguageCodes();
   loadTranslationFormalities();
   loadVoiceIds();
+  loadVolumeSliders();
   setLatencyTrackingUIVisibility();
   initCCP(onConnectInitialized);
 };
@@ -314,6 +318,7 @@ const initEventListeners = () => {
     const micVolume = parseFloat(event.target.value);
     console.log(`${LOGGER_PREFIX} - customerStreamMicVolume input - Setting microphone volume to: ${micVolume}`);
     CCP_V2V.UI.fromCustomerAudioElement.volume = micVolume;
+    addUpdateLocalStorageKey("customerStreamMicVolume", event.target.value);
   });
 
   CCP_V2V.UI.customerAudioFeedbackEnabledCheckbox.addEventListener("change", (event) => {
@@ -375,6 +380,7 @@ const initEventListeners = () => {
   CCP_V2V.UI.agentStreamMicVolume.addEventListener("input", (event) => {
     const micVolume = parseFloat(event.target.value);
     if (ToCustomerAudioStreamManager != null) ToCustomerAudioStreamManager.setMicrophoneVolume(micVolume);
+    addUpdateLocalStorageKey("agentStreamMicVolume", event.target.value);
   });
 
   //Translate Agent UI buttons
@@ -1154,7 +1160,9 @@ async function handleAgentTranscript(text) {
 }
 
 async function handleCustomerSynthesis(data) {
-  if (!data || !CCP_V2V.UI.customerVoiceIdSelect.value) return;
+  if (!data || !CCP_V2V.UI.agentVoiceIdSelect.value || CCP_V2V.UI.agentVoiceIdSelect.value === "disabled") return;
+
+
   for (let i = 0; i < data.length; i++) {
     //Play Customer Speech to Agent
     let audioContentArrayBufferPrimary = base64ToArrayBuffer(data[i]);
@@ -1173,7 +1181,7 @@ async function handleCustomerSynthesis(data) {
 }
 
 function handleAgentSynthesis(data) {
-  if (!data || !CCP_V2V.UI.agentVoiceIdSelect.value) return;
+  if (!data || !CCP_V2V.UI.customerVoiceIdSelect.value || CCP_V2V.UI.customerVoiceIdSelect.value === "disabled") return;
   for (let i = 0; i < data.length; i++) {
     //Play Agent Speech to Customer
     const audioContentArrayBufferPrimary = base64ToArrayBuffer(data[i]);
@@ -1257,6 +1265,23 @@ function loadVoiceIds() {
   }
 }
 
+function loadVolumeSliders() {
+  const savedCustomerVolume = getLocalStorageValueByKey("customerStreamMicVolume");
+  if (savedCustomerVolume) {
+    CCP_V2V.UI.customerStreamMicVolume.value = savedCustomerVolume;
+    CCP_V2V.UI.fromCustomerAudioElement.volume = parseFloat(savedCustomerVolume);
+  }
+
+  const savedAgentVolume = getLocalStorageValueByKey("agentStreamMicVolume");
+  if (savedAgentVolume) {
+    CCP_V2V.UI.agentStreamMicVolume.value = savedAgentVolume;
+    // Apply volume to ToCustomerAudioStreamManager if it exists
+    if (ToCustomerAudioStreamManager != null) {
+      ToCustomerAudioStreamManager.setMicrophoneVolume(parseFloat(savedAgentVolume));
+    }
+  }
+}
+
 function setBackgroundColour(element, cssClass) {
   // Remove all background classes first
   element.classList.remove("bg-pale-green", "bg-pale-yellow", "bg-none");
@@ -1327,6 +1352,14 @@ function clearTranscriptCards() {
 
   // Remove all children except the last one (spacer)
   document.querySelectorAll(".transcript-container .transcript-card").forEach((card) => card.remove());
+}
+
+function cleanUpUI() {
+  // Clear transcription and translation text output divs when contact ends
+  CCP_V2V.UI.customerTranscriptionTextOutputDiv.textContent = "";
+  CCP_V2V.UI.agentTranscriptionTextOutputDiv.textContent = "";
+  CCP_V2V.UI.customerTranslatedTextOutputDiv.textContent = "";
+  CCP_V2V.UI.agentTranslatedTextOutputDiv.textContent = "";
 }
 
 function getMicrophoneConstraints(deviceId) {
